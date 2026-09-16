@@ -1,0 +1,390 @@
+---
+title: "Homework 2: PCA for Image Compression"
+author: "Quinn Hungerford"
+date: "2026-09-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+
+x1 <- data.matrix(read_csv("image1.csv", show_col_types = FALSE))
+x2 <- data.matrix(read_csv("image2.csv", show_col_types = FALSE))
+x3 <- data.matrix(read_csv("image3.csv", show_col_types = FALSE))
+x4 <- data.matrix(read_csv("image4.csv", show_col_types = FALSE))
+```
+
+# Image Compression Function
+
+```{r}
+image_compress <- function(x, k) {
+  
+  V <- t(x) %*% x
+  eig <- eigen(V)
+  U <- eig$vectors
+  Z <- x %*% U
+  
+  x_approx <- Z[, 1:k, drop = FALSE] %*%
+              t(U[, 1:k, drop = FALSE])
+  
+  error <- norm(x - x_approx, type = "F")
+  
+  return(list(approximation = x_approx, error = error))
+}
+```
+
+
+# Image 1
+
+## Original Image and PCA Approximations
+
+```{r}
+par(mfrow = c(3, 4), mar = c(1, 1, 2, 1))
+
+# Original image
+image(
+  t(x1[nrow(x1):1, ]),
+  col = gray.colors(256),
+  axes = FALSE,
+  main = "Original"
+)
+
+# Approximations from rank 1 to rank 10
+for (k in 1:10) {
+  result <- image_compress(x1, k)
+  image(
+    t(result$approximation[nrow(result$approximation):1, ]),
+    col = gray.colors(256),
+    axes = FALSE,
+    main = paste("k =", k)
+  )
+}
+
+par(mfrow = c(1, 1))
+```
+
+## Approximation Error
+
+```{r}
+errors <- numeric(ncol(x1))
+
+for (k in 1:ncol(x1)) {
+  result <- image_compress(x1, k)
+  errors[k] <- result$error
+}
+
+plot(
+  1:ncol(x1),
+  errors,
+  type = "l",
+  xlab = "k",
+  ylab = "Approximation Error",
+  main = "Image 1: Approximation Error vs. k"
+)
+```
+
+## First Eigenvector and First PC Score
+
+```{r}
+V1 <- t(x1) %*% x1
+eig1 <- eigen(V1)
+U1 <- eig1$vectors
+Z1 <- x1 %*% U1
+
+par(mfrow = c(1, 2))
+
+plot(
+  U1[, 1],
+  type = "l",
+  xlab = "Column",
+  ylab = "Eigenvector Value",
+  main = "First Eigenvector"
+)
+
+plot(
+  Z1[, 1],
+  type = "l",
+  xlab = "Row",
+  ylab = "PC Score",
+  main = "First PC Score"
+)
+
+par(mfrow = c(1, 1))
+```
+
+The first eigenvector has a very large value around column 78 but mostly stays near 0 everywhere else. This implies that the main feature of the original image is that big vertical line on the right, and shows that this is captured by the first principal component. The first PC score varies across the rows but is mostly consistent in magnitude which tells us how the strength of this main vertical line feature doesn't really change row to row. Combined, the first eigenvector and first PC score show the major vertical structure that's visible in the rank-1 approximation.
+
+I think that k = 2 provides a sufficiently good approximation for Image 1. K = 2 clearly captures the main vertical line feature of the image and a close-enough background coloring to the true tone (unlike k = 1), although increasing k beyond this reduces the approximation error and brings the background color closer to its original tone.
+
+
+# Image 2
+
+## Original Image and PCA Approximations
+
+```{r}
+par(mfrow = c(3, 4), mar = c(1, 1, 2, 1))
+
+# Original image
+image(
+  t(x2[nrow(x2):1, ]),
+  col = gray.colors(256),
+  axes = FALSE,
+  main = "Original"
+)
+
+# Approximations for rank 1 to rank 10
+for (k in 1:10) {
+  result <- image_compress(x2, k)
+  image(
+    t(result$approximation[nrow(result$approximation):1, ]),
+    col = gray.colors(256),
+    axes = FALSE,
+    main = paste("k =", k)
+  )
+}
+
+par(mfrow = c(1, 1))
+```
+
+## Approximation Error
+
+```{r}
+errors2 <- numeric(ncol(x2))
+
+for (k in 1:ncol(x2)) {
+  result <- image_compress(x2, k)
+  errors2[k] <- result$error
+}
+
+plot(
+  1:ncol(x2),
+  errors2,
+  type = "l",
+  xlab = "k",
+  ylab = "Approximation Error",
+  main = "Image 2: Approximation Error vs. k"
+)
+```
+
+## First Eigenvector and First PC Score
+
+```{r}
+V2 <- t(x2) %*% x2
+eig2 <- eigen(V2)
+U2 <- eig2$vectors
+Z2 <- x2 %*% U2
+
+par(mfrow = c(1, 2))
+
+plot(
+  U2[, 1],
+  type = "l",
+  xlab = "Column",
+  ylab = "Eigenvector Value",
+  main = "First Eigenvector"
+)
+
+plot(
+  Z2[, 1],
+  type = "l",
+  xlab = "Row",
+  ylab = "PC Score",
+  main = "First PC Score"
+)
+
+par(mfrow = c(1, 1))
+```
+
+Here, we can see that the first eigenvector decreases linearly across the columns. This tells us that the main feature of image 2 is a gradual color intensity change across the image.  The first PC score varies a lot across the rows, which shows us that the strength of this pattern changes from row to row. Combined, the first eigenvector and first PC score capture pretty much all of the visible structure.
+
+Once again, I think that k = 1 is a sufficiently good approximation for Image 2. The rank-1 approximation is visually indistinguishable from the original image, and its approximation error is quite small. Although k = 2 reduces the error to basically zero, this extra component doesn't show much visual improvement.
+
+
+# Image 3
+
+## Original Image and PCA Approximations
+
+```{r}
+par(mfrow = c(3, 4), mar = c(1, 1, 2, 1))
+
+# Original image
+image(
+  t(x3[nrow(x3):1, ]),
+  col = gray.colors(256),
+  axes = FALSE,
+  main = "Original"
+)
+
+# Approximations for rank 1 to rank 10
+for (k in 1:10) {
+  result <- image_compress(x3, k)
+  image(
+    t(result$approximation[nrow(result$approximation):1, ]),
+    col = gray.colors(256),
+    axes = FALSE,
+    main = paste("k =", k)
+  )
+}
+
+par(mfrow = c(1, 1))
+```
+
+```{r}
+# Extra approximations to get a clearer idea of the optimal k
+par(mfrow = c(2, 3), mar = c(1, 1, 2, 1))
+
+for (k in c(10, 20, 30, 40, 50, 75)) {
+  result <- image_compress(x3, k)
+  image(
+    t(result$approximation[nrow(result$approximation):1, ]),
+    col = gray.colors(256),
+    axes = FALSE,
+    main = paste("k =", k)
+  )
+}
+
+par(mfrow = c(1, 1))
+```
+
+## Approximation Error
+
+```{r}
+errors3 <- numeric(ncol(x3))
+
+for (k in 1:ncol(x3)) {
+  result <- image_compress(x3, k)
+  errors3[k] <- result$error
+}
+
+plot(
+  1:ncol(x3),
+  errors3,
+  type = "l",
+  xlab = "k",
+  ylab = "Approximation Error",
+  main = "Image 3: Approximation Error vs. k"
+)
+```
+
+## First Eigenvector and First PC Score
+
+```{r}
+V3 <- t(x3) %*% x3
+eig3 <- eigen(V3)
+U3 <- eig3$vectors
+Z3 <- x3 %*% U3
+
+par(mfrow = c(1, 2))
+
+plot(
+  U3[, 1],
+  type = "l",
+  xlab = "Column",
+  ylab = "Eigenvector Value",
+  main = "First Eigenvector"
+)
+
+plot(
+  Z3[, 1],
+  type = "l",
+  xlab = "Row",
+  ylab = "PC Score",
+  main = "First PC Score"
+)
+
+par(mfrow = c(1, 1))
+```
+
+
+
+The first eigenvector varies a lot across the columns rather than being dominated by one single feature. This tells us that the first principal component captures a broader pattern of light and dark sections all within the image. The first PC score also changes a ton across the rows, which shows us that the strength of this pattern in the image varies here as well. Combined, we can see the more complex structure of Image 3 that cannot be represented as effectively by a single principal component like Images 1 and 2 can.
+
+I think that k = 30 provides a sufficiently good approximation for Image 3. At lower values of k, the main subject is recognizable but is seriously blurred. By k = 30, the dog and other important details of the image are much more clearly visible. Increasing k beyond 30 continues to reduce the approximation error and adds much finer details, but the improvements appear increasingly smaller.
+
+
+# Image 4
+
+## Original Image and PCA Approximations
+
+```{r}
+par(mfrow = c(3, 4), mar = c(1, 1, 2, 1))
+
+# Original image
+image(
+  t(x4[nrow(x4):1, ]),
+  col = gray.colors(256),
+  axes = FALSE,
+  main = "Original"
+)
+
+# Approximations for rank 1 to rank 10
+for (k in 1:10) {
+  result <- image_compress(x4, k)
+  image(
+    t(result$approximation[nrow(result$approximation):1, ]),
+    col = gray.colors(256),
+    axes = FALSE,
+    main = paste("k =", k)
+  )
+}
+
+par(mfrow = c(1, 1))
+```
+
+## Approximation Error
+
+```{r}
+errors4 <- numeric(ncol(x4))
+
+for (k in 1:ncol(x4)) {
+  result <- image_compress(x4, k)
+  errors4[k] <- result$error
+}
+
+plot(
+  1:ncol(x4),
+  errors4,
+  type = "l",
+  xlab = "k",
+  ylab = "Approximation Error",
+  main = "Image 4: Approximation Error vs. k"
+)
+```
+
+## First Eigenvector and First PC Score
+
+```{r}
+V4 <- t(x4) %*% x4
+eig4 <- eigen(V4)
+U4 <- eig4$vectors
+Z4 <- x4 %*% U4
+
+par(mfrow = c(1, 2))
+
+plot(
+  U4[, 1],
+  type = "l",
+  xlab = "Column",
+  ylab = "Eigenvector Value",
+  main = "First Eigenvector"
+)
+
+plot(
+  Z4[, 1],
+  type = "l",
+  xlab = "Row",
+  ylab = "PC Score",
+  main = "First PC Score"
+)
+
+par(mfrow = c(1, 1))
+```
+
+The first eigenvector varies a ton across the columns, with some of its largest changes happening right in the middle section of the image where there's some white splotches. This tells us that the first principal component captures broader tone changes across different horizontal locations rather than any single isolated feature. The first PC score also varies a lot across the rows, with a large change around row 150, showing that the strength of this pattern changes across vertical parts of the image. Combined, these patterns capture the light and dark regions of Image 4.
+
+I think that k = 10 provides a sufficiently good approximation for Image 4. By k = 10, the major light and dark regions and the overall structure of the original image are clearly seen. Increasing k beyond 10 helps further reduce the approximation error and add finer details, but the overall appearance of the image doesn't change much.
+
+
+
